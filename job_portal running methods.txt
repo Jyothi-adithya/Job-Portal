@@ -1,0 +1,118 @@
+curl -X POST -H "Content-Type: application/json" -d "{\"email\":\"admin@example.com\",\"password\":\"admin123\",\"userType\":\"admin\"}" http://localhost:3000/api/login
+{"user":{"admin_id":1,"email":"admin@example.com"}}
+
+
+
+SHOW TABLES;
+mysql -u root -p job_portal < C:\job-portal\schema.sql
+SELECT * FROM users;
+SELECT * FROM applicants;
+
+
+mysql -u root -p
+USE job_portal;
+SELECT * FROM admins;
+const bcrypt = require('bcrypt');
+bcrypt.hash('admin123', 10, (err, hash) => {
+  if (err) throw err;
+  console.log(hash);
+});
+cd C:\job-portal
+node hash.js
+UPDATE job_portal.admins SET password = 'your_new_hash' WHERE email = 'admin@example.com';
+INSERT INTO job_portal.admins (email, password) VALUES ('admin@example.com', 'your_new_hash');
+
+
+
+
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: 'mySecurePassword123', // Your root password
+    database: 'job_portal'
+});
+mysqladmin -u root -p status
+
+
+
+const bcrypt = require('bcrypt');
+bcrypt.hash('admin123', 10, (err, hash) => {
+    if (err) throw err;
+    console.log(hash);
+});
+cd C:\job-portal
+node hash.js
+USE job_portal;
+UPDATE admins SET password = 'your_new_hash' WHERE email = 'admin@example.com';
+INSERT INTO admins (email, password) VALUES ('admin@example.com', 'your_new_hash');
+DELETE FROM admins WHERE email = 'admin@example.com';
+INSERT INTO admins (email, password) VALUES ('admin@example.com', 'your_new_hash');
+SELECT * FROM admins WHERE email = 'admin@example.com';
+
+
+DROP TABLE admins;
+CREATE TABLE admins (
+    admin_id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL
+);
+INSERT INTO admins (email, password) VALUES ('admin@example.com', 'your_new_hash');
+
+
+
+cd C:\job-portal
+npm install bcrypt
+
+rm -rf node_modules package-lock.json
+npm install
+
+SHOW DATABASES;
+USE job_portal;
+SHOW TABLES;
+
+
+
+
+
+
+
+Step 2:Alternative to curl (Using Postman)
+If curl is problematic, use Postman to test the /api/login endpoint.
+
+Install Postman:
+Download and install Postman from www.postman.com/downloads/.
+Create a Request:
+Open Postman and create a new request.
+Set the method to POST.
+Set the URL to:
+text
+
+Copy
+http://localhost:3000/api/login
+Go to Headers and add:
+Key: Content-Type, Value: application/json
+Go to Body, select raw, choose JSON, and paste:
+json
+
+Copy
+{
+    "email": "admin@example.com",
+    "password": "admin123",
+    "userType": "admin"
+}
+Send the Request:
+Click Send.
+Share the response (e.g., {"error":"Server error"}).
+
+
+
+
+
+
+
+USE job_portal;
+INSERT INTO admins (email, password) 
+VALUES ('newadmin@example.com', 'your_hash');
+SELECT * FROM admins WHERE email = 'newadmin@example.com';
+curl -X POST -H "Content-Type: application/json" -d "{\"email\":\"newadmin@example.com\",\"password\":\"AdminPass123\",\"userType\":\"admin\"}" http://localhost:3000/api/login
+{"user":{"admin_id":2,"email":"newadmin@example.com"}}

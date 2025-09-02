@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Portal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Job Portal</h1>
+
+        <!-- Login Form -->
+        <div id="login-form">
+            <h2>Login</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="login-email" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" required>
+            </div>
+            <div class="form-group">
+                <label>User Type</label>
+                <select id="login-user-type">
+                    <option value="applicant">Applicant</option>
+                    <option value="employer">Employer</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <button class="btn" onclick="login()">Login</button>
+            <button class="btn" onclick="showRegister()">Register</button>
+            <p class="error" id="login-error"></p>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="register-form" class="hidden">
+            <h2>Register</h2>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="reg-name" required>
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="reg-email" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="reg-password" required>
+            </div>
+            <div class="form-group">
+                <label>User Type</label>
+                <select id="reg-user-type">
+                    <option value="applicant">Applicant</option>
+                    <option value="employer">Employer</option>
+                </select>
+            </div>
+            <div id="applicant-fields" class="hidden">
+                <div class="form-group">
+                    <label>Resume Link</label>
+                    <input type="url" id="reg-resume">
+                </div>
+                <div class="form-group">
+                    <label>Skills</label>
+                    <input type="text" id="reg-skills">
+                </div>
+            </div>
+            <div id="employer-fields" class="hidden">
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" id="reg-company">
+                </div>
+                <div class="form-group">
+                    <label>Website</label>
+                    <input type="url" id="reg-website">
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="reg-location">
+                </div>
+            </div>
+            <button class="btn" onclick="register()">Register</button>
+            <button class="btn" onclick="showLogin()">Back to Login</button>
+            <p class="error" id="reg-error"></p>
+        </div>
+
+        <!-- Applicant Dashboard -->
+        <div id="applicant-dashboard" class="hidden">
+            <h2>Welcome, <span id="applicant-name"></span></h2>
+            <h3>Available Jobs</h3>
+            <div id="job-list"></div>
+            <h3>My Applications</h3>
+            <div id="application-list"></div>
+        </div>
+
+        <!-- Employer Dashboard -->
+        <div id="employer-dashboard" class="hidden">
+            <h2>Welcome, <span id="employer-name"></span></h2>
+            <h3>Post a Job</h3>
+            <p id="job-post-error" style="color: red;"></p>
+            <div class="form-group">
+                <label>Job Title</label>
+                <input type="text" id="job-title" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="job-description" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="job-location" required>
+            </div>
+            <div class="form-group">
+                <label>Salary</label>
+                <input type="number" id="job-salary" required>
+            </div>
+            <button class="btn" onclick="postJob()">Post Job</button>
+            <h3>Your Job Listings</h3>
+            <div id="employer-jobs-list"></div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="admin-dashboard" class="hidden">
+            <h2>Admin Dashboard</h2>
+            <p id="admin-error" style="color: red;"></p>
+            <h3>All Users</h3>
+            <div id="admin-users-list"></div>
+            <h3>All Jobs</h3>
+            <div id="admin-jobs-list"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
