@@ -4,132 +4,287 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Job Portal</h1>
-
-        <!-- Login Form -->
-        <div id="login-form">
-            <h2>Login</h2>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="login-email" required>
+    <header class="topbar">
+        <div class="topbar__brand">
+            <span class="logo-mark">JP</span>
+            <div>
+                <div class="brand-title">Job Portal</div>
+                <div class="brand-subtitle">Hiring workspace</div>
             </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="login-password" required>
-            </div>
-            <div class="form-group">
-                <label>User Type</label>
-                <select id="login-user-type">
-                    <option value="applicant">Applicant</option>
-                    <option value="employer">Employer</option>
-                    <option value="admin">Admin</option>
-                </select>
-            </div>
-            <button class="btn" onclick="login()">Login</button>
-            <button class="btn" onclick="showRegister()">Register</button>
-            <p class="error" id="login-error"></p>
         </div>
-
-        <!-- Registration Form -->
-        <div id="register-form" class="hidden">
-            <h2>Register</h2>
-            <div class="form-group">
-                <label>Name</label>
-                <input type="text" id="reg-name" required>
-            </div>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="reg-email" required>
-            </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="reg-password" required>
-            </div>
-            <div class="form-group">
-                <label>User Type</label>
-                <select id="reg-user-type">
-                    <option value="applicant">Applicant</option>
-                    <option value="employer">Employer</option>
-                </select>
-            </div>
-            <div id="applicant-fields" class="hidden">
-                <div class="form-group">
-                    <label>Resume Link</label>
-                    <input type="url" id="reg-resume">
-                </div>
-                <div class="form-group">
-                    <label>Skills</label>
-                    <input type="text" id="reg-skills">
-                </div>
-            </div>
-            <div id="employer-fields" class="hidden">
-                <div class="form-group">
-                    <label>Company Name</label>
-                    <input type="text" id="reg-company">
-                </div>
-                <div class="form-group">
-                    <label>Website</label>
-                    <input type="url" id="reg-website">
-                </div>
-                <div class="form-group">
-                    <label>Location</label>
-                    <input type="text" id="reg-location">
-                </div>
-            </div>
-            <button class="btn" onclick="register()">Register</button>
-            <button class="btn" onclick="showLogin()">Back to Login</button>
-            <p class="error" id="reg-error"></p>
+        <div class="topbar__meta">
+            <span class="role-pill" id="role-label">Guest</span>
+            <span class="user-name" id="user-name">Sign in to continue</span>
+            <button class="btn btn-ghost hidden" id="logout-btn" onclick="logout()">Logout</button>
         </div>
+    </header>
+
+    <main class="shell">
+        <section id="auth-section" class="auth-shell">
+            <aside class="auth-aside">
+                <h1>Hire smarter, faster</h1>
+                <p>
+                    Centralize roles, manage applicants, and move candidates through
+                    your pipeline with clear signals and clean workflows.
+                </p>
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <span class="feature-icon">01</span>
+                        <div>
+                            <h4>Talent visibility</h4>
+                            <p>Track every applicant, every step, in one place.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">02</span>
+                        <div>
+                            <h4>Frictionless posting</h4>
+                            <p>Launch roles quickly with structured job data.</p>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">03</span>
+                        <div>
+                            <h4>Actionable insights</h4>
+                            <p>Know what is open, filled, and in motion.</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="auth-panel">
+                <div class="panel-head">
+                    <h2>Welcome back</h2>
+                    <p>Log in to continue managing your workspace.</p>
+                </div>
+
+                <!-- Login Form -->
+                <div id="login-form" class="panel">
+                    <h3>Login</h3>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="login-email" placeholder="name@company.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="login-password" placeholder="********" required>
+                    </div>
+                    <div class="form-group">
+                        <label>User Type</label>
+                        <select id="login-user-type">
+                            <option value="applicant">Applicant</option>
+                            <option value="employer">Employer</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn btn-primary" id="login-submit" onclick="login()">Login</button>
+                        <button class="btn btn-ghost" id="login-register" onclick="showRegister()">Register</button>
+                    </div>
+                    <p class="error" id="login-error" role="status" aria-live="polite"></p>
+                </div>
+
+                <!-- Registration Form -->
+                <div id="register-form" class="panel hidden">
+                    <h3>Create account</h3>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="reg-name" placeholder="Full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="reg-email" placeholder="name@company.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="reg-password" placeholder="Create a secure password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>User Type</label>
+                        <select id="reg-user-type">
+                            <option value="applicant">Applicant</option>
+                            <option value="employer">Employer</option>
+                        </select>
+                    </div>
+                    <div id="applicant-fields" class="hidden">
+                        <div class="form-group">
+                            <label>Resume Link</label>
+                            <input type="url" id="reg-resume" placeholder="https://">
+                        </div>
+                        <div class="form-group">
+                            <label>Skills</label>
+                            <input type="text" id="reg-skills" placeholder="Product design, React, SQL">
+                        </div>
+                    </div>
+                    <div id="employer-fields" class="hidden">
+                        <div class="form-group">
+                            <label>Company Name</label>
+                            <input type="text" id="reg-company" placeholder="Company name">
+                        </div>
+                        <div class="form-group">
+                            <label>Website</label>
+                            <input type="url" id="reg-website" placeholder="https://">
+                        </div>
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="reg-location" placeholder="City, Country">
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn btn-primary" id="register-submit" onclick="register()">Register</button>
+                        <button class="btn btn-ghost" id="register-back" onclick="showLogin()">Back to Login</button>
+                    </div>
+                    <p class="error" id="reg-error" role="status" aria-live="polite"></p>
+                </div>
+            </div>
+        </section>
 
         <!-- Applicant Dashboard -->
-        <div id="applicant-dashboard" class="hidden">
-            <h2>Welcome, <span id="applicant-name"></span></h2>
-            <h3>Available Jobs</h3>
-            <div id="job-list"></div>
-            <h3>My Applications</h3>
-            <div id="application-list"></div>
-        </div>
+        <section id="applicant-dashboard" class="dashboard hidden">
+            <div class="section-head">
+                <div>
+                    <h2>Welcome, <span id="applicant-name"></span></h2>
+                    <p class="section-subtitle">Browse roles and track your applications.</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-label">Open roles</span>
+                        <span class="kpi-value" id="applicant-kpi-jobs">0</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-label">My applications</span>
+                        <span class="kpi-value" id="applicant-kpi-apps">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="section-block">
+                <h3>Available Jobs</h3>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="job-search">Search</label>
+                        <input type="text" id="job-search" placeholder="Title, company, or keyword">
+                    </div>
+                    <div class="filter-group">
+                        <label for="job-location-filter">Location</label>
+                        <input type="text" id="job-location-filter" placeholder="Remote or city">
+                    </div>
+                    <div class="filter-group">
+                        <label for="job-role-filter">Role</label>
+                        <input type="text" id="job-role-filter" placeholder="Designer, Engineer">
+                    </div>
+                    <div class="filter-group">
+                        <label for="job-salary-min">Salary min</label>
+                        <input type="number" id="job-salary-min" placeholder="50000">
+                    </div>
+                    <div class="filter-group">
+                        <label for="job-salary-max">Salary max</label>
+                        <input type="number" id="job-salary-max" placeholder="150000">
+                    </div>
+                    <div class="filter-group">
+                        <label for="job-sort">Sort</label>
+                        <select id="job-sort">
+                            <option value="newest">Newest</option>
+                            <option value="salary-desc">Salary: High to Low</option>
+                            <option value="salary-asc">Salary: Low to High</option>
+                            <option value="company-asc">Company: A to Z</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-ghost" id="clear-job-filters">Clear filters</button>
+                    </div>
+                </div>
+                <div class="filter-meta">
+                    <span id="job-count">0 roles</span>
+                </div>
+                <div id="job-list" class="cards-grid"></div>
+            </div>
+            <div class="section-block">
+                <h3>My Applications</h3>
+                <div id="application-list" class="cards-grid"></div>
+            </div>
+        </section>
 
         <!-- Employer Dashboard -->
-        <div id="employer-dashboard" class="hidden">
-            <h2>Welcome, <span id="employer-name"></span></h2>
-            <h3>Post a Job</h3>
-            <p id="job-post-error" style="color: red;"></p>
-            <div class="form-group">
-                <label>Job Title</label>
-                <input type="text" id="job-title" required>
+        <section id="employer-dashboard" class="dashboard hidden">
+            <div class="section-head">
+                <div>
+                    <h2>Welcome, <span id="employer-name"></span></h2>
+                    <p class="section-subtitle">Publish new roles and manage applicants.</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-label">Active postings</span>
+                        <span class="kpi-value" id="employer-kpi-jobs">0</span>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="job-description" required></textarea>
+            <div class="section-block panel">
+                <div class="panel-head">
+                    <h3>Post a Job</h3>
+                    <p>Create a new role with structured details.</p>
+                </div>
+                <p id="job-post-error" class="error" role="status" aria-live="polite"></p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Job Title</label>
+                        <input type="text" id="job-title" placeholder="Senior Product Designer" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" id="job-location" placeholder="Remote or City" required>
+                    </div>
+                    <div class="form-group form-span">
+                        <label>Description</label>
+                        <textarea id="job-description" placeholder="Describe the role responsibilities" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Salary</label>
+                        <input type="number" id="job-salary" placeholder="75000" required>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="post-job-btn" onclick="postJob()">Post Job</button>
             </div>
-            <div class="form-group">
-                <label>Location</label>
-                <input type="text" id="job-location" required>
+            <div class="section-block">
+                <h3>Your Job Listings</h3>
+                <div id="employer-jobs-list" class="cards-grid"></div>
             </div>
-            <div class="form-group">
-                <label>Salary</label>
-                <input type="number" id="job-salary" required>
-            </div>
-            <button class="btn" onclick="postJob()">Post Job</button>
-            <h3>Your Job Listings</h3>
-            <div id="employer-jobs-list"></div>
-        </div>
+        </section>
 
         <!-- Admin Dashboard -->
-        <div id="admin-dashboard" class="hidden">
-            <h2>Admin Dashboard</h2>
-            <p id="admin-error" style="color: red;"></p>
-            <h3>All Users</h3>
-            <div id="admin-users-list"></div>
-            <h3>All Jobs</h3>
-            <div id="admin-jobs-list"></div>
-        </div>
-    </div>
+        <section id="admin-dashboard" class="dashboard hidden">
+            <div class="section-head">
+                <div>
+                    <h2>Admin Dashboard</h2>
+                    <p class="section-subtitle">Monitor users, jobs, and activity.</p>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-label">Users</span>
+                        <span class="kpi-value" id="admin-kpi-users">0</span>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-label">Jobs</span>
+                        <span class="kpi-value" id="admin-kpi-jobs">0</span>
+                    </div>
+                </div>
+            </div>
+            <p id="admin-error" class="error" role="status" aria-live="polite"></p>
+            <div class="section-block">
+                <h3>All Users</h3>
+                <div id="admin-users-list" class="cards-grid"></div>
+            </div>
+            <div class="section-block">
+                <h3>All Jobs</h3>
+                <div id="admin-jobs-list" class="cards-grid"></div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <script src="app.js"></script>
 </body>

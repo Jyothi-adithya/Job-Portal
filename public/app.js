@@ -1,72 +1,301 @@
 let currentUser = null;
+let registerListenerBound = false;
+let jobsCache = [];
+
+function setStatus(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (!el) {
+        return;
+    }
+    el.textContent = message || '';
+}
+
+function setButtonLoading(buttonId, isLoading, loadingLabel) {
+    const button = typeof buttonId === 'string' ? document.getElementById(buttonId) : buttonId;
+    if (!button) {
+        return;
+    }
+    button.disabled = isLoading;
+    if (isLoading && loadingLabel) {
+        button.dataset.originalLabel = button.textContent;
+        button.textContent = loadingLabel;
+    } else if (!isLoading && button.dataset.originalLabel) {
+        button.textContent = button.dataset.originalLabel;
+        delete button.dataset.originalLabel;
+    }
+}
+
+function showToast(message, variant = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        return;
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast toast--${variant}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.remove();
+    }, 3500);
+}
+
+function setRole(role, name) {
+    const roleLabel = document.getElementById('role-label');
+    const userName = document.getElementById('user-name');
+    if (roleLabel) {
+        roleLabel.textContent = role || 'Guest';
+    }
+    if (userName) {
+        userName.textContent = name || 'Sign in to continue';
+    }
+}
+
+function setLoggedInState(isLoggedIn) {
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.classList.toggle('hidden', !isLoggedIn);
+    }
+}
+
+function setKpiValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.textContent = value;
+    }
+}
+
+function normalizeText(value) {
+    return String(value || '').toLowerCase();
+}
+
+function parseSalary(value) {
+    const parsed = Number(String(value || '').replace(/[^0-9.]/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatSalary(value) {
+    const salary = parseSalary(value);
+    if (!salary) {
+        return 'Salary not listed';
+    }
+    return `$${salary.toLocaleString()}`;
+}
+
+function formatDate(value) {
+    if (!value) {
+        return 'Date not listed';
+    }
+    return new Date(value).toLocaleDateString();
+}
+
+function getCompanyInitials(name) {
+    const cleaned = String(name || '').trim();
+    if (!cleaned) {
+        return 'CO';
+    }
+    const parts = cleaned.split(' ').filter(Boolean);
+    const initials = parts.slice(0, 2).map(part => part[0].toUpperCase()).join('');
+    return initials || cleaned.slice(0, 2).toUpperCase();
+}
+
+function getJobTags(job) {
+    const location = normalizeText(job.location);
+    const title = normalizeText(job.job_title);
+    const description = normalizeText(job.description);
+    const tags = [];
+
+    if (location.includes('remote')) {
+        tags.push('Remote');
+    }
+
+    if (title.includes('senior') || description.includes('senior') || title.includes('lead')) {
+        tags.push('Senior');
+    } else if (title.includes('junior') || description.includes('junior')) {
+        tags.push('Junior');
+    } else if (title.includes('intern') || description.includes('intern')) {
+        tags.push('Intern');
+    }
+
+    if (title.includes('contract') || description.includes('contract')) {
+        tags.push('Contract');
+    } else if (title.includes('part time') || title.includes('part-time') || description.includes('part time') || description.includes('part-time')) {
+        tags.push('Part-time');
+    } else if (title.includes('full time') || title.includes('full-time') || description.includes('full time') || description.includes('full-time')) {
+        tags.push('Full-time');
+    }
+
+    if (tags.length === 0) {
+        tags.push('Full-time');
+    }
+
+    return tags.slice(0, 4);
+}
+
+function renderJobCards(jobs, targetId, options = {}) {
+    const list = document.getElementById(targetId);
+    if (!list) {
+        return;
+    }
+    list.innerHTML = '';
+    if (!jobs.length) {
+        list.innerHTML = `<p>${options.emptyMessage || 'No jobs available.'}</p>`;
+        return;
+    }
+    jobs.forEach(job => {
+        const jobItem = document.createElement('div');
+        jobItem.className = 'job-item job-card';
+        const companyName = job.company_name || 'Company';
+        const description = job.description || 'No description provided.';
+        const location = job.location || 'Location not listed';
+        const tagHtml = getJobTags(job).map(tag => `<span class="tag">${tag}</span>`).join('');
+        const actions = options.actionBuilder ? options.actionBuilder(job) : '';
+        jobItem.innerHTML = `
+            <div class="job-card__header">
+                <div class="company-avatar">${getCompanyInitials(companyName)}</div>
+                <div>
+                    <h4>${job.job_title}</h4>
+                    <div class="company-name">${companyName}</div>
+                </div>
+                <span class="job-salary">${formatSalary(job.salary)}</span>
+            </div>
+            <p class="job-description">${description}</p>
+            <div class="job-meta">
+                <span>${location}</span>
+                <span>Posted ${formatDate(job.posted_date)}</span>
+            </div>
+            <div class="tag-row">${tagHtml}</div>
+            ${actions}
+        `;
+        list.appendChild(jobItem);
+    });
+}
+
+function applyJobFilters() {
+    const search = normalizeText(document.getElementById('job-search')?.value);
+    const location = normalizeText(document.getElementById('job-location-filter')?.value);
+    const role = normalizeText(document.getElementById('job-role-filter')?.value);
+    const minSalary = parseSalary(document.getElementById('job-salary-min')?.value);
+    const maxSalary = parseSalary(document.getElementById('job-salary-max')?.value);
+    const sort = document.getElementById('job-sort')?.value || 'newest';
+
+    let filtered = jobsCache.filter(job => {
+        const title = normalizeText(job.job_title);
+        const company = normalizeText(job.company_name);
+        const description = normalizeText(job.description);
+        const jobLocation = normalizeText(job.location);
+        const salary = parseSalary(job.salary);
+
+        if (search && !title.includes(search) && !company.includes(search) && !description.includes(search)) {
+            return false;
+        }
+        if (location && !jobLocation.includes(location)) {
+            return false;
+        }
+        if (role && !title.includes(role)) {
+            return false;
+        }
+        if (minSalary && salary < minSalary) {
+            return false;
+        }
+        if (maxSalary && salary > maxSalary) {
+            return false;
+        }
+        return true;
+    });
+
+    if (sort === 'salary-desc') {
+        filtered.sort((a, b) => parseSalary(b.salary) - parseSalary(a.salary));
+    } else if (sort === 'salary-asc') {
+        filtered.sort((a, b) => parseSalary(a.salary) - parseSalary(b.salary));
+    } else if (sort === 'company-asc') {
+        filtered.sort((a, b) => normalizeText(a.company_name).localeCompare(normalizeText(b.company_name)));
+    } else {
+        filtered.sort((a, b) => new Date(b.posted_date) - new Date(a.posted_date));
+    }
+
+    const countLabel = document.getElementById('job-count');
+    if (countLabel) {
+        countLabel.textContent = `${filtered.length} roles`;
+    }
+    setKpiValue('applicant-kpi-jobs', filtered.length);
+    renderJobCards(filtered, 'job-list', {
+        emptyMessage: jobsCache.length ? 'No jobs match these filters.' : 'No jobs available.',
+        actionBuilder: job => `<button class="btn btn-primary" data-job-id="${job.job_id}">Apply</button>`
+    });
+    document.querySelectorAll('#job-list [data-job-id]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const jobId = parseInt(button.getAttribute('data-job-id'));
+            await applyForJob(jobId);
+        });
+    });
+}
 
         function showLogin() {
-            document.getElementById('login-form').classList.remove('hidden');
-            document.getElementById('register-form').classList.add('hidden');
-            document.getElementById('applicant-dashboard').classList.add('hidden');
-            document.getElementById('employer-dashboard').classList.add('hidden');
-            document.getElementById('admin-dashboard').classList.add('hidden');
+            document.getElementById('auth-section')?.classList.remove('hidden');
+            document.getElementById('login-form')?.classList.remove('hidden');
+            document.getElementById('register-form')?.classList.add('hidden');
+            document.getElementById('applicant-dashboard')?.classList.add('hidden');
+            document.getElementById('employer-dashboard')?.classList.add('hidden');
+            document.getElementById('admin-dashboard')?.classList.add('hidden');
+            setRole('Guest', 'Sign in to continue');
+            setLoggedInState(false);
+            setStatus('login-error', '');
         }
 
         function showRegister() {
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('register-form').classList.remove('hidden');
-            document.getElementById('reg-user-type').addEventListener('change', (e) => {
-                const type = e.target.value;
-                document.getElementById('applicant-fields').classList.toggle('hidden', type !== 'applicant');
-                document.getElementById('employer-fields').classList.toggle('hidden', type !== 'employer');
-            });
+            document.getElementById('login-form')?.classList.add('hidden');
+            document.getElementById('register-form')?.classList.remove('hidden');
+            const type = document.getElementById('reg-user-type')?.value;
+            document.getElementById('applicant-fields')?.classList.toggle('hidden', type !== 'applicant');
+            document.getElementById('employer-fields')?.classList.toggle('hidden', type !== 'employer');
+            setStatus('reg-error', '');
+        }
+
+        function logout() {
+            currentUser = null;
+            showLogin();
+            showToast('Logged out', 'info');
         }
 
         async function login() {
-            console.log('Login button clicked');
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const userType = document.getElementById('login-user-type').value;
-            console.log('Sending:', JSON.stringify({ email, password, userType }, null, 2));
-            const errorElement = document.getElementById('login-error');
-            if (!errorElement) {
-                console.error('login-error element not found in DOM');
-                alert('Login failed: UI error (missing login-error element)');
-                return;
-            }
+            setStatus('login-error', '');
+            setButtonLoading('login-submit', true, 'Signing in...');
             try {
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password, userType })
                 });
-                console.log('Response status:', response.status);
                 const data = await response.json();
-                console.log('Response data:', JSON.stringify(data, null, 2));
                 if (data.error) {
-                    console.log('Server returned error:', data.error);
-                    document.getElementById('login-error').textContent = data.error;
+                    setStatus('login-error', data.error);
                     return;
                 }
                 currentUser = data.user;
-                console.log('Current user set:', JSON.stringify(currentUser, null, 2));
+                setRole(userType, currentUser.name || 'User');
+                setLoggedInState(true);
+                document.getElementById('auth-section')?.classList.add('hidden');
                 if (userType === 'applicant') {
-                    console.log('Navigating to applicant dashboard');
                     document.getElementById('applicant-name').textContent = currentUser.name || 'Applicant';
                     document.getElementById('applicant-dashboard').classList.remove('hidden');
-                    document.getElementById('login-form').classList.add('hidden');
                     loadJobs();
+                    loadApplications();
                 } else if (userType === 'employer') {
-                    console.log('Navigating to employer dashboard');
                     document.getElementById('employer-name').textContent = currentUser.name || 'Employer';
                     document.getElementById('employer-dashboard').classList.remove('hidden');
-                    document.getElementById('login-form').classList.add('hidden');
                     loadEmployerJobs();
                 } else {
-                    console.log('Navigating to admin dashboard');
                     document.getElementById('admin-dashboard').classList.remove('hidden');
-                    document.getElementById('login-form').classList.add('hidden');
                     loadAdminData();
                 }
+                showToast('Welcome back', 'success');
             } catch (err) {
-                console.error('Fetch error:', err);
-                document.getElementById('login-error').textContent = 'Server error';
+                setStatus('login-error', 'Server error');
+            } finally {
+                setButtonLoading('login-submit', false);
             }
         }
         
@@ -84,6 +313,8 @@ let currentUser = null;
                 location: document.getElementById('reg-location').value
             };
 
+            setStatus('reg-error', '');
+            setButtonLoading('register-submit', true, 'Creating...');
             try {
                 const response = await fetch('/api/register', {
                     method: 'POST',
@@ -92,100 +323,57 @@ let currentUser = null;
                 });
                 const data = await response.json();
                 if (data.error) {
-                    document.getElementById('reg-error').textContent = data.error;
+                    setStatus('reg-error', data.error);
                     return;
                 }
                 showLogin();
+                showToast('Account created. Please log in.', 'success');
             } catch (err) {
-                document.getElementById('reg-error').textContent = 'Server error';
+                setStatus('reg-error', 'Server error');
+            } finally {
+                setButtonLoading('register-submit', false);
             }
         }
 
         async function loadJobs() {
-            console.log('loadJobs called');
             try {
                 const response = await fetch('/api/jobs');
-                console.log('Jobs response status:', response.status);
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }   
                 const jobs = await response.json();
-                console.log('Jobs data:', jobs);
-                const jobList = document.getElementById('job-list');
-                if (!jobList) {
-                    console.error('job-list element not found');
-                    alert('UI error: missing job-list element');
-                    return;  
-                }    
-
-                jobList.innerHTML = '';
-                if (jobs.length === 0) {
-                    jobList.innerHTML = '<p>No jobs available.</p>';
-                    return;
-                }    
-                jobs.forEach(job => {
-                    const jobItem = document.createElement('div');
-                    jobItem.className = 'job-item';
-                    jobItem.innerHTML = `
-                        <h4>${job.job_title}</h4>
-                        <p>${job.description}</p>
-                        <p>Location: ${job.location}</p>
-                        <p>Salary: $${job.salary}</p>
-                        <p>Posted: ${new Date(job.posted_date).toLocaleDateString()}</p>
-                        <p>Company: ${job.company_name}</p>
-                        <button class="apply-btn" data-job-id="${job.job_id}">Apply</button>
-                    `;
-                    jobList.appendChild(jobItem);
-                });
-                document.querySelectorAll('.apply-btn').forEach(button => {
-                    button.addEventListener('click', async () => {
-                       const jobId = parseInt(button.getAttribute('data-job-id'));
-                       await applyForJob(jobId);
-                    });
-                });        
+                jobsCache = Array.isArray(jobs) ? jobs : [];
+                applyJobFilters();
             } catch (err) {
-                console.error('loadJobs error:', err);
-                jobList.innerHTML = '<p>Error loading jobs.</p>';
+                renderJobCards([], 'job-list', { emptyMessage: 'Error loading jobs.' });
             }
         }
 
         async function applyForJob(jobId) {
-            console.log(`Applying for job_id: ${jobId}, applicant_id: ${currentUser.user_id}`);
             try {
                 const response = await fetch('/api/applications', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ job_id: jobId, applicant_id: currentUser.user_id })
                 });
-                console.log('Apply response status:', response.status);
                 if (!response.ok) {  
                     const errorData = await response.json();
                     throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
                 }
-                const data = await response.json();
-                console.log('Apply response:', data);
-                alert('Application submitted successfully!');
-                // Optionally refresh job list or update UI  
+                await response.json();
+                showToast('Application submitted successfully!', 'success');
+                loadApplications();
             } catch (err) {
-                  console.error('Apply for job error:', err);
-                  alert(`Failed to apply: ${err.message}`);  
+                  showToast(`Failed to apply: ${err.message}`, 'error');
             }
         }            
 
 
             
         async function postJob() {
-            console.log('Post job button clicked');
             const errorElement = document.getElementById('job-post-error');
-            if (!errorElement) {
-                    console.error('job-post-error element not found');
-                    alert('UI error: missing job-post-error element');
-                    return;
-                }
             if (!currentUser || !currentUser.user_id) {
-                console.error('No logged-in employer found');
-                document.getElementById('job-post-error').textContent = 'Please log in as an employer';
-                alert('Please log in as an employer');
+                setStatus('job-post-error', 'Please log in as an employer');
                 return;
             }
             const employer_id = currentUser.user_id;
@@ -193,7 +381,6 @@ let currentUser = null;
             const description = document.getElementById('job-description')?.value?.trim();
             const location = document.getElementById('job-location')?.value?.trim();
             const salary = document.getElementById('job-salary')?.value;
-            console.log('Form values:', { employer_id, job_title, description, location, salary });
             const missingFields = [];
             if (!employer_id) missingFields.push('employer_id');
             if (!job_title) missingFields.push('job_title');
@@ -201,90 +388,64 @@ let currentUser = null;
             if (!location) missingFields.push('location');
             if (!salary) missingFields.push('salary');
             if (missingFields.length > 0) {
-                console.error('Missing required fields:', missingFields);
-                document.getElementById('job-post-error').textContent = `Please fill: ${missingFields.join(', ')}`;
-                alert(`Please fill: ${missingFields.join(', ')}`);
+                setStatus('job-post-error', `Please fill: ${missingFields.join(', ')}`);
                 return;
             }
+            setStatus('job-post-error', '');
+            setButtonLoading('post-job-btn', true, 'Posting...');
             try {
                 const response = await fetch('/api/jobs', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ employer_id, job_title, description, location, salary })
                 });
-                console.log('Response status:', response.status);
                 const data = await response.json();
-                console.log('Response data:', JSON.stringify(data, null, 2));
-                const errorElement = document.getElementById('job-post-error');
                 
                 if (data.error) {
-                    console.log('Server returned error:', data.error);
-                    errorElement.textContent = data.error;
+                    setStatus('job-post-error', data.error);
                     return;
                 }
-                errorElement.textContent = 'Job posted successfully';
+                setStatus('job-post-error', 'Job posted successfully');
+                showToast('Job posted successfully', 'success');
                 document.getElementById('job-title').value = '';
                 document.getElementById('job-description').value = '';
                 document.getElementById('job-location').value = '';
                 document.getElementById('job-salary').value = '';
                 loadEmployerJobs();
             } catch (err) {
-                console.error('Fetch error:', err);
-                errorElement.textContent = 'Failed to connect to server';
+                setStatus('job-post-error', 'Failed to connect to server');
+            } finally {
+                setButtonLoading('post-job-btn', false);
             }
         }
 
         
 
         async function loadEmployerJobs() {
-            console.log('loadEmployerJobs called');
             if (!currentUser || !currentUser.user_id) {
-                console.error('No logged-in employer found');
                 return;
             }    
             try {
                 const response = await fetch(`/api/employer/jobs?employer_id=${currentUser.user_id}`);
-                console.log('Response status:', response.status);
                 const jobs = await response.json();
-                console.log('Jobs data:', JSON.stringify(jobs, null, 2));
-                const jobList = document.getElementById('employer-jobs-list');
-                if (!jobList) {
-                    console.error('employer-jobs-list element not found');
-                    alert('UI error: missing employer-jobs-list element');
-                    return;
-                }
-                jobList.innerHTML = '';
-                if (jobs.length === 0) {
-                        jobList.innerHTML = '<p>No jobs posted yet.</p>';
-                        return;
-                }
-                jobs.forEach(job => {     
-                const jobItem = document.createElement('div');
-                jobItem.className = 'job-item';
-                jobItem.innerHTML = `
-                    <h3>${job.job_title}</h3>
-                    <p>${job.description}</p>
-                    <p>Location: ${job.location}</p>
-                    <p>Salary: $${job.salary}</p>
-                    <p>Posted: ${new Date(job.posted_date).toLocaleDateString()}</p>
-                    <button class="view-applicants-btn" data-job-id="${job.job_id}">View Applicants</button>
-                    <div class="applicants-list" id="applicants-${job.job_id}"></div>
-                `; 
-                jobList.appendChild(jobItem);
-                }); 
-                document.querySelectorAll('.view-applicants-btn').forEach(button => {
+                const safeJobs = Array.isArray(jobs) ? jobs : [];
+                setKpiValue('employer-kpi-jobs', safeJobs.length);
+                renderJobCards(safeJobs, 'employer-jobs-list', {
+                    emptyMessage: 'No jobs posted yet.',
+                    actionBuilder: job => `
+                        <button class="btn btn-ghost" data-job-id="${job.job_id}">View Applicants</button>
+                        <div class="applicants-list" id="applicants-${job.job_id}"></div>
+                    `
+                });
+                document.querySelectorAll('#employer-jobs-list [data-job-id]').forEach(button => {
                     button.addEventListener('click', async () => {
                         const jobId = button.getAttribute('data-job-id');
                         await loadApplicants(jobId);
                     });
-                });        
+                });
 
             } catch (err) {      
-                console.error('loadEmployerJobs error:', err);
-                const jobList = document.getElementById('employer-jobs-list');
-                if (jobList) {
-                    jobList.innerHTML = '<p>Error loading jobs.</p>';
-                }    
+                renderJobCards([], 'employer-jobs-list', { emptyMessage: 'Error loading jobs.' });
             }
         }    
         async function viewApplications(jobId) {
@@ -334,25 +495,19 @@ let currentUser = null;
         }
 
         async function loadAdminData() {
-            console.log('loadAdminData called');
             const errorElement = document.getElementById('admin-error');
             if (!errorElement) {
-                console.error('admin-error element not found');
-                alert('UI error: missing admin-error element');
                 return;
             }    
             try {
                 const usersResponse = await fetch('/api/admin/users');
-                console.log('Users response status:', usersResponse.status);
                 if (!usersResponse.ok) {
                         throw new Error(`HTTP error! Status: ${usersResponse.status}`);
                 }
                 const users = await usersResponse.json();
-                console.log('Users data:', JSON.stringify(users, null, 2));
                 const usersList = document.getElementById('admin-users-list');
                 if (!usersList) {
-                    console.error('admin-users-list element not found');
-                    errorElement.textContent = 'UI error: missing admin-users-list element';
+                    setStatus('admin-error', 'UI error: missing admin-users-list element');
                     return;
                 }
                 usersList.innerHTML = '';
@@ -371,40 +526,18 @@ let currentUser = null;
                         usersList.appendChild(userItem);
                     });
                 }
+                setKpiValue('admin-kpi-users', users.length);
                 
                 const jobsResponse = await fetch('/api/admin/jobs');
-                console.log('Jobs response status:', jobsResponse.status);
                 if (!jobsResponse.ok) {
                         throw new Error(`HTTP error! Status: ${jobsResponse.status}`);
                 }
                 const jobs = await jobsResponse.json();
-                console.log('Jobs data:', JSON.stringify(jobs, null, 2));
-                const jobsList = document.getElementById('admin-jobs-list');
-                if (!jobsList) {
-                    console.error('admin-jobs-list element not found');
-                    errorElement.textContent = 'UI error: missing admin-jobs-list element';
-                    return;
-                }
-                jobsList.innerHTML = '';
-                if (jobs.length === 0) {
-                      jobsList.innerHTML = '<p>No jobs posted yet.</p>';
-                } else {
-                    jobs.forEach(job => {
-                        const jobItem = document.createElement('div');
-                        jobItem.className = 'job-item';
-                        jobItem.innerHTML = `
-                        <h3>${job.job_title}</h3>
-                        <p>${job.description}</p>
-                        <p>Location: ${job.location}</p>
-                        <p>Salary: $${job.salary}</p>
-                        <p>Posted: ${new Date(job.posted_date).toLocaleDateString()}</p>
-                        `;
-                        jobsList.appendChild(jobItem);
-                    });   
-                }
+                const safeJobs = Array.isArray(jobs) ? jobs : [];
+                renderJobCards(safeJobs, 'admin-jobs-list', { emptyMessage: 'No jobs posted yet.' });
+                setKpiValue('admin-kpi-jobs', safeJobs.length);
             } catch (err) {
-                console.error('loadAdminData error:', err);
-                errorElement.textContent = 'Failed to load data';  
+                setStatus('admin-error', 'Failed to load data');  
             }  
         }  
        async function loadApplicants(jobId) {
@@ -465,42 +598,35 @@ let currentUser = null;
    }
    
         async function updateApplicationStatus(applicationId, status, jobId) {
-       console.log(`Updating application_id: ${applicationId} to status: ${status}`);
        try {
            const response = await fetch(`/api/employer/application/${applicationId}/status`, {
                method: 'PATCH',
                headers: { 'Content-Type': 'application/json' },
                body: JSON.stringify({ status, employer_id: currentUser.user_id })
            });
-           console.log('Update status response status:', response.status);
            if (!response.ok) {
                const errorData = await response.json();
                throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
            }
-           const data = await response.json();
-           console.log('Update status response:', data);
-           alert(`Application ${status} successfully!`);
-           loadApplicants(jobId); // Refresh applicants list
+           await response.json();
+           showToast(`Application ${status} successfully!`, 'success');
+           if (jobId) {
+               loadApplicants(jobId);
+           }
        } catch (err) {
-           console.error('Update application status error:', err);
-           alert(`Failed to update status: ${err.message}`);
+           showToast(`Failed to update status: ${err.message}`, 'error');
        }
    }
 
 async function loadApplications() {
-       console.log('loadApplications called');
        try {
            const response = await fetch(`/api/applicant/applications?applicant_id=${currentUser.user_id}`);
-           console.log('Applications response status:', response.status);
            if (!response.ok) {
                throw new Error(`HTTP error! Status: ${response.status}`);
            }
            const applications = await response.json();
-           console.log('Applications data:', JSON.stringify(applications, null, 2));
            const applicationList = document.getElementById('application-list');
            if (!applicationList) {
-               console.error('application-list element not found');
-               alert('UI error: Could not load applications');
                return;
            }
            applicationList.innerHTML = '';
@@ -519,24 +645,73 @@ async function loadApplications() {
                    applicationList.appendChild(appItem);
                });
            }
+           setKpiValue('applicant-kpi-apps', applications.length);
        } catch (err) {
-           console.error('loadApplications error:', err);
-           applicationList.innerHTML = `<p>Error loading applications: ${err.message}</p>`;
+           const applicationList = document.getElementById('application-list');
+           if (applicationList) {
+               applicationList.innerHTML = `<p>Error loading applications: ${err.message}</p>`;
+           }
        }
    }
 
    function showApplicantDashboard() {
-       console.log('Showing applicant dashboard');
        document.querySelectorAll('.dashboard').forEach(d => d.classList.add('hidden'));
        const dashboard = document.getElementById('applicant-dashboard');
        if (dashboard) {
            dashboard.classList.remove('hidden');
            loadJobs();
-           loadApplications(); // Load applications when showing dashboard
-       } else {
-           console.error('applicant-dashboard element not found');
+           loadApplications();
        }
    }
+
+   function initUI() {
+       if (!registerListenerBound) {
+           const select = document.getElementById('reg-user-type');
+           if (select) {
+               select.addEventListener('change', (e) => {
+                   const type = e.target.value;
+                   document.getElementById('applicant-fields')?.classList.toggle('hidden', type !== 'applicant');
+                   document.getElementById('employer-fields')?.classList.toggle('hidden', type !== 'employer');
+               });
+               registerListenerBound = true;
+           }
+       }
+        const filterInputs = [
+            'job-search',
+            'job-location-filter',
+            'job-role-filter',
+            'job-salary-min',
+            'job-salary-max'
+        ];
+        filterInputs.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', applyJobFilters);
+            }
+        });
+        const sortSelect = document.getElementById('job-sort');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', applyJobFilters);
+        }
+        const clearBtn = document.getElementById('clear-job-filters');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                filterInputs.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.value = '';
+                    }
+                });
+                if (sortSelect) {
+                    sortSelect.value = 'newest';
+                }
+                applyJobFilters();
+            });
+        }
+       setLoggedInState(false);
+   }
+
+   document.addEventListener('DOMContentLoaded', initUI);
     
           
 
